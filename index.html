@@ -194,6 +194,21 @@
   }
   .card .toolbtn:hover{ background: var(--chip-bg); }
 
+  .live-badge{
+    font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--good);
+    white-space: nowrap; flex: none;
+  }
+  .weather-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 10px; }
+  .weather-tile{
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 4px; background: var(--chip-bg);
+  }
+  .weather-tile .wt-venue{ font-size: 13px; font-weight: 600; color: var(--ink-primary); }
+  .weather-tile .wt-place{ font-size: 11px; color: var(--ink-muted); margin-bottom: 2px; }
+  .weather-tile .wt-temp{ font-size: 24px; font-weight: 700; font-family: "Barlow Condensed", sans-serif; display:flex; align-items:baseline; gap:6px; }
+  .weather-tile .wt-cond{ font-size: 12px; color: var(--ink-secondary); }
+  .weather-tile .wt-skel{ opacity: .5; }
+
   .legend{ display:flex; flex-wrap: wrap; gap: 12px 16px; font-size: 12.5px; color: var(--ink-secondary); }
   .legend-item{ display:flex; align-items:center; gap: 6px; }
   .swatch{ width: 10px; height: 10px; border-radius: 3px; flex: none; }
@@ -329,6 +344,17 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Right now at the grounds</h2>
+        <div class="subtitle">Live conditions at the busiest venues in this selection</div>
+      </div>
+      <span class="live-badge">● Live &middot; Open-Meteo</span>
+    </div>
+    <div class="chart-wrap" id="weatherWrap" style="overflow:visible"></div>
+  </div>
+
   <div class="records-grid" id="recordsGrid"></div>
 
 </div>
@@ -346,6 +372,53 @@
 
   var TEAM_ORDER = ["England","France","Ireland","Scotland","Wales","Italy","Argentina","Australia","New Zealand","South Africa"];
   var TEAM_CODE = {England:"ENG",France:"FRA",Ireland:"IRE",Scotland:"SCO",Wales:"WAL",Italy:"ITA",Argentina:"ARG",Australia:"AUS","New Zealand":"NZL","South Africa":"RSA"};
+
+  // Known coordinates for the venues that most often top the "busiest grounds" list,
+  // used to fetch live conditions from Open-Meteo (no API key required).
+  var VENUE_COORDS = {
+    "Twickenham": [51.4559, -0.3421],
+    "Twickenham Stadium": [51.4559, -0.3421],
+    "Lansdowne Road": [53.3351, -6.2286],
+    "Aviva Stadium": [53.3351, -6.2286],
+    "Murrayfield Stadium": [55.9422, -3.2417],
+    "Murrayfield": [55.9422, -3.2417],
+    "Millennium Stadium": [51.4782, -3.1826],
+    "Principality Stadium": [51.4782, -3.1826],
+    "National Stadium": [51.4782, -3.1826],
+    "Cardiff Arms Park": [51.4788, -3.1810],
+    "Stade de France": [48.9244, 2.3601],
+    "Parc des Princes": [48.8414, 2.2530],
+    "Stade Yves-du-Manoir": [48.9242, 2.2536],
+    "Eden Park": [-36.8748, 174.7448],
+    "Sydney Cricket Ground": [-33.8916, 151.2246],
+    "Sydney Football Stadium": [-33.8913, 151.2249],
+    "Stadium Australia": [-33.8470, 151.0634],
+    "St Helen's": [51.6127, -3.9412],
+    "Stadio Olimpico": [41.9341, 12.4547],
+    "Stadio Flaminio": [41.9339, 12.4667],
+    "Inverleith": [55.9647, -3.2131],
+    "Lang Park": [-27.4655, 153.0095],
+    "Lancaster Park": [-43.5321, 172.6720],
+    "Athletic Park": [-41.3020, 174.7690],
+    "Ellis Park": [-26.1988, 28.0622],
+    "Carisbrook": [-45.8894, 170.4930],
+    "José Amalfitani Stadium": [-34.6469, -58.5033],
+    "Ballymore Stadium": [-27.4560, 153.0201],
+    "Newlands": [-33.9737, 18.4645],
+    "Kings Park Stadium": [-29.8272, 31.0034],
+    "Raeburn Place": [55.9614, -3.2183]
+  };
+  var WEATHER_CODES = {
+    0:["Clear sky","☀️"], 1:["Mainly clear","🌤️"], 2:["Partly cloudy","⛅"], 3:["Overcast","☁️"],
+    45:["Fog","🌫️"], 48:["Fog","🌫️"],
+    51:["Light drizzle","🌦️"], 53:["Drizzle","🌦️"], 55:["Dense drizzle","🌦️"],
+    61:["Light rain","🌧️"], 63:["Rain","🌧️"], 65:["Heavy rain","🌧️"],
+    71:["Light snow","🌨️"], 73:["Snow","🌨️"], 75:["Heavy snow","🌨️"],
+    80:["Rain showers","🌦️"], 81:["Rain showers","🌦️"], 82:["Violent showers","⛈️"],
+    85:["Snow showers","🌨️"], 86:["Snow showers","🌨️"],
+    95:["Thunderstorm","⛈️"], 96:["Thunderstorm","⛈️"], 99:["Thunderstorm","⛈️"]
+  };
+  var weatherCache = {};
   var CAT_COLORS = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)"];
 
   var YEARS = MATCHES.map(function(r){ return +r[0].slice(0,4); });
@@ -488,7 +561,7 @@
     renderStandings(rows);
     renderHeatmap(rows);
     renderCompetitionMix(rows);
-    renderVenues(rows);
+    renderGroundsWeather(renderVenues(rows));
     renderRecords(rows);
   }
 
@@ -790,12 +863,12 @@
     }
     var counts = {};
     rows.forEach(function(r){
-      var key = r[7] + "|" + r[9];
+      var key = r[7] + "|" + r[8] + "|" + r[9];
       counts[key] = (counts[key]||0) + 1;
     });
     var items = Object.keys(counts).map(function(k){
       var parts = k.split("|");
-      return { stadium: parts[0], country: parts[1], count: counts[k] };
+      return { stadium: parts[0], city: parts[1], country: parts[2], count: counts[k] };
     }).sort(function(a,b){ return b.count-a.count; }).slice(0,8);
     var max = items[0].count;
 
@@ -819,6 +892,56 @@
     }).join("");
     wrap.innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Busiest grounds">'+bars+'</svg>';
     wireTips(wrap);
+    return items;
+  }
+
+  // ---------- live weather at the grounds (Open-Meteo, no key required) ----------
+  var weatherToken = 0;
+  function renderGroundsWeather(venueItems){
+    var myToken = ++weatherToken;
+    var wrap = document.getElementById("weatherWrap");
+    var known = (venueItems || []).filter(function(it){ return VENUE_COORDS[it.stadium]; }).slice(0, 6);
+
+    if (known.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No live conditions available for this selection.</div>';
+      return;
+    }
+
+    wrap.innerHTML = '<div class="weather-grid">' + known.map(function(it){
+      var cached = weatherCache[it.stadium];
+      return '<div class="weather-tile">' +
+        '<div class="wt-venue">'+esc(it.stadium)+'</div>' +
+        '<div class="wt-place">'+esc(it.city)+', '+esc(it.country)+'</div>' +
+        (cached ? weatherTileBody(cached) : '<div class="wt-skel">Loading&hellip;</div>') +
+        '</div>';
+    }).join("") + '</div>';
+
+    var toFetch = known.filter(function(it){ return !weatherCache[it.stadium]; });
+    if (toFetch.length === 0) return;
+
+    var lats = toFetch.map(function(it){ return VENUE_COORDS[it.stadium][0]; }).join(",");
+    var lons = toFetch.map(function(it){ return VENUE_COORDS[it.stadium][1]; }).join(",");
+    var url = "https://api.open-meteo.com/v1/forecast?latitude="+lats+"&longitude="+lons+
+      "&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto";
+
+    fetch(url).then(function(res){ return res.json(); }).then(function(data){
+      var results = Array.isArray(data) ? data : [data];
+      toFetch.forEach(function(it, i){
+        var d = results[i];
+        if (d && d.current) weatherCache[it.stadium] = d.current;
+      });
+      if (myToken === weatherToken) renderGroundsWeather(venueItems);
+    }).catch(function(){
+      if (myToken === weatherToken) {
+        wrap.querySelectorAll(".wt-skel").forEach(function(el){ el.textContent = "Unavailable right now"; });
+      }
+    });
+  }
+
+  function weatherTileBody(current){
+    var info = WEATHER_CODES[current.weather_code] || ["--", ""];
+    return '<div class="wt-temp">'+Math.round(current.temperature_2m)+'&deg;C <span style="font-size:16px">'+info[1]+'</span></div>' +
+      '<div class="wt-cond">'+esc(info[0])+' &middot; wind '+Math.round(current.wind_speed_10m)+' km/h</div>';
   }
 
   // ---------- records ----------
