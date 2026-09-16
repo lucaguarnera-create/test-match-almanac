@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test Match Almanac</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: light;
+    --pitch: #0f4d33;
+    --pitch-ink: #eef7f1;
+    --bg-page: #f9f9f7;
+    --bg-surface: #fcfcfb;
+    --ink-primary: #0b0b0b;
+    --ink-secondary: #52514e;
+    --ink-muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --chip-bg: #f1f0ea;
+
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+    --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+
+    --seq-100: #cde2fb; --seq-300: #6da7ec; --seq-500: #256abf; --seq-650: #104281;
+
+    --good: #0ca30c; --critical: #d03b3b; --draw: #9a988f;
+
+    --shadow: 0 1px 2px rgba(11,11,11,0.06), 0 8px 24px -12px rgba(11,11,11,0.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --pitch: #1c7a4f;
+      --pitch-ink: #eef7f1;
+      --bg-page: #0d0d0d;
+      --bg-surface: #1a1a19;
+      --ink-primary: #ffffff;
+      --ink-secondary: #c3c2b7;
+      --ink-muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --chip-bg: #232320;
+
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+      --s4: #c98500; --s5: #d55181; --s6: #008300;
+
+      --seq-100: #184f95; --seq-300: #256abf; --seq-500: #6da7ec; --seq-650: #cde2fb;
+
+      --good: #0ca30c; --critical: #e66767; --draw: #8f8d84;
+
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --pitch: #1c7a4f;
+    --pitch-ink: #eef7f1;
+    --bg-page: #0d0d0d;
+    --bg-surface: #1a1a19;
+    --ink-primary: #ffffff;
+    --ink-secondary: #c3c2b7;
+    --ink-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --chip-bg: #232320;
+
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --s4: #c98500; --s5: #d55181; --s6: #008300;
+
+    --seq-100: #184f95; --seq-300: #256abf; --seq-500: #6da7ec; --seq-650: #cde2fb;
+
+    --good: #0ca30c; --critical: #e66767; --draw: #8f8d84;
+
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  *{ box-sizing: border-box; }
+  body{
+    background: var(--bg-page);
+    color: var(--ink-primary);
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3, .display, .stat-value{
+    font-family: "Barlow Condensed", "Oswald", Impact, system-ui, sans-serif;
+    text-wrap: balance;
+  }
+  .tabular{ font-variant-numeric: tabular-nums; }
+
+  /* ---------- masthead ---------- */
+  .masthead{
+    background:
+      radial-gradient(1100px 420px at 85% -60%, rgba(255,255,255,0.08), transparent 60%),
+      linear-gradient(180deg, var(--pitch), color-mix(in srgb, var(--pitch) 82%, black));
+    color: var(--pitch-ink);
+    padding: 44px 28px 30px;
+  }
+  .masthead-inner{ max-width: 1180px; margin: 0 auto; }
+  .eyebrow{
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--pitch-ink) 72%, transparent);
+    font-weight: 600; margin: 0 0 8px;
+  }
+  .masthead h1{
+    font-size: clamp(34px, 5vw, 54px); line-height: 0.98; font-weight: 700;
+    margin: 0 0 10px; letter-spacing: 0.002em;
+  }
+  .masthead p.lede{
+    font-size: 16px; max-width: 640px; margin: 0 0 26px;
+    color: color-mix(in srgb, var(--pitch-ink) 86%, transparent);
+  }
+  .kpi-row{
+    display: grid; grid-template-columns: repeat(5, minmax(0,1fr));
+    gap: 1px; background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; overflow: hidden;
+  }
+  .kpi{
+    background: rgba(0,0,0,0.12);
+    padding: 14px 16px;
+  }
+  .kpi-value{ font-size: 30px; font-weight: 700; line-height: 1; }
+  .kpi-label{
+    font-size: 11.5px; letter-spacing: 0.03em; margin-top: 6px;
+    color: color-mix(in srgb, var(--pitch-ink) 70%, transparent);
+  }
+
+  /* ---------- page body ---------- */
+  .page{ max-width: 1180px; margin: 0 auto; padding: 24px 28px 60px; display: flex; flex-direction: column; gap: 20px; }
+
+  .filter-bar{
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 18px; box-shadow: var(--shadow);
+    display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+  }
+  .filter-group{ display:flex; flex-direction:column; gap:8px; }
+  .filter-group.grow{ flex: 1 1 420px; }
+  .filter-label{ font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; }
+  .year-selects{ display:flex; align-items:center; gap:8px; }
+  select{
+    font: inherit; font-size: 14px; color: var(--ink-primary); background: var(--chip-bg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px;
+  }
+  select:focus-visible, button:focus-visible, .chip:focus-visible{ outline: 2px solid var(--s1); outline-offset: 2px; }
+  .chip-row{ display:flex; flex-wrap: wrap; gap: 6px; }
+  .chip{
+    font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--chip-bg); color: var(--ink-secondary);
+    transition: background .12s ease, color .12s ease, border-color .12s ease;
+  }
+  .chip[aria-pressed="true"]{
+    background: var(--pitch); border-color: var(--pitch); color: var(--pitch-ink);
+  }
+  .reset-btn{
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space:nowrap;
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--ink-secondary);
+  }
+  .reset-btn:hover{ background: var(--chip-bg); }
+
+  .grid-2{ display:grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }
+  @media (max-width: 880px){ .grid-2{ grid-template-columns: 1fr; } }
+
+  .card{
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 20px 16px; box-shadow: var(--shadow); position: relative;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .card-head{ display:flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .card h2{ font-size: 22px; font-weight: 600; margin: 0; }
+  .card .subtitle{ font-size: 12.5px; color: var(--ink-muted); }
+  .card .toolbtn{
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    padding: 5px 10px; border-radius: 7px; border: 1px solid var(--border);
+    background: transparent; color: var(--ink-secondary);
+  }
+  .card .toolbtn:hover{ background: var(--chip-bg); }
+
+  .legend{ display:flex; flex-wrap: wrap; gap: 12px 16px; font-size: 12.5px; color: var(--ink-secondary); }
+  .legend-item{ display:flex; align-items:center; gap: 6px; }
+  .swatch{ width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+  .chart-wrap{ position: relative; }
+  svg{ display:block; width: 100%; height: auto; overflow: visible; }
+  .axis-label{ fill: var(--ink-muted); font-size: 10.5px; font-family: "Inter", sans-serif; }
+  .grid-line{ stroke: var(--grid); stroke-width: 1; }
+  .baseline{ stroke: var(--baseline); stroke-width: 1; }
+  .bar-label{ fill: var(--ink-secondary); font-size: 11.5px; font-family: "Inter", sans-serif; font-variant-numeric: tabular-nums; }
+  .cat-label{ fill: var(--ink-primary); font-size: 12.5px; font-family: "Inter", sans-serif; font-weight: 500; }
+
+  .tooltip{
+    position: fixed; z-index: 50; pointer-events: none;
+    background: var(--ink-primary); color: var(--bg-surface);
+    font-size: 12.5px; line-height: 1.5; padding: 8px 11px; border-radius: 8px;
+    max-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    opacity: 0; transform: translateY(2px); transition: opacity .08s ease;
+  }
+  .tooltip.show{ opacity: 1; }
+  .tooltip b{ font-weight: 600; }
+  .tooltip .tt-muted{ opacity: .72; }
+
+  .empty-state{ padding: 28px 0; text-align: center; color: var(--ink-muted); font-size: 13.5px; }
+
+  table.data-table{ width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data-table th, table.data-table td{
+    text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid);
+  }
+  table.data-table th{ color: var(--ink-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  table.data-table td.num, table.data-table th.num{ text-align: right; font-variant-numeric: tabular-nums; }
+  table.data-table tbody tr:hover{ background: var(--chip-bg); }
+
+  .records-grid{ display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
+  @media (max-width: 980px){ .records-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 560px){ .records-grid{ grid-template-columns: 1fr; } }
+  .record-tile{
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 18px; box-shadow: var(--shadow); display:flex; flex-direction: column; gap: 6px;
+  }
+  .record-tile .tag{ font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--s1); font-weight: 700; }
+  .record-tile .headline{ font-size: 21px; font-weight: 600; line-height: 1.15; font-family:"Barlow Condensed",sans-serif; }
+  .record-tile .detail{ font-size: 12.5px; color: var(--ink-muted); }
+
+  footer{ max-width: 1180px; margin: 0 auto; padding: 0 28px 40px; color: var(--ink-muted); font-size: 12px; }
+  footer a{ color: inherit; }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-inner">
+    <p class="eyebrow">Six Nations - Rugby Championship - Rugby World Cup</p>
+    <h1>Test Match Almanac</h1>
+    <p class="lede">Every result between rugby's ten tier-one nations, 1871 to 2024  -  filter by era and rivalry to see how the record book shifts.</p>
+    <div class="kpi-row" id="kpiRow"></div>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label class="filter-label" for="yearFrom">Seasons</label>
+      <div class="year-selects">
+        <select id="yearFrom" aria-label="From year"></select>
+        <span style="color:var(--ink-muted)">to</span>
+        <select id="yearTo" aria-label="To year"></select>
+      </div>
+    </div>
+    <div class="filter-group grow">
+      <label class="filter-label">Nations <span id="teamCountLabel" style="text-transform:none;font-weight:400;color:var(--ink-muted)"></span></label>
+      <div class="chip-row" id="teamChips"></div>
+    </div>
+    <button class="reset-btn" id="resetBtn">Reset filters</button>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Tests played per year</h2>
+        <div class="subtitle">Stacked by competition type - hover for a season's breakdown</div>
+      </div>
+    </div>
+    <div class="legend" id="trendLegend"></div>
+    <div class="chart-wrap" id="trendWrap"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Nation standings</h2>
+          <div class="subtitle">Ranked by win rate across the selected seasons</div>
+        </div>
+        <button class="toolbtn" id="standingsToggle">View as table</button>
+      </div>
+      <div class="legend" id="standingsLegend"></div>
+      <div class="chart-wrap" id="standingsWrap"></div>
+      <div class="chart-wrap" id="standingsTableWrap" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Head-to-head</h2>
+          <div class="subtitle">Matches played between each pair - hover a cell</div>
+        </div>
+      </div>
+      <div class="chart-wrap" id="heatmapWrap"></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>What kind of test?</h2>
+          <div class="subtitle">Matches by competition type</div>
+        </div>
+      </div>
+      <div class="chart-wrap" id="compWrap"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Busiest grounds</h2>
+          <div class="subtitle">Top venues by tests hosted</div>
+        </div>
+      </div>
+      <div class="chart-wrap" id="venueWrap"></div>
+    </div>
+  </div>
+
+  <div class="records-grid" id="recordsGrid"></div>
+
+</div>
+
+<footer>
+  Source: <span class="tabular" id="footerCount"></span> tier-one international rugby results, 1871-2024. Built from a public results archive.
+</footer>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var TEAM_ORDER = ["England","France","Ireland","Scotland","Wales","Italy","Argentina","Australia","New Zealand","South Africa"];
+  var TEAM_CODE = {England:"ENG",France:"FRA",Ireland:"IRE",Scotland:"SCO",Wales:"WAL",Italy:"ITA",Argentina:"ARG",Australia:"AUS","New Zealand":"NZL","South Africa":"RSA"};
+  var CAT_COLORS = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)"];
+
+  var YEARS = MATCHES.map(function(r){ return +r[0].slice(0,4); });
+  var YEAR_MIN = Math.min.apply(null, YEARS);
+  var YEAR_MAX = Math.max.apply(null, YEARS);
+
+  var state = {
+    teams: new Set(TEAM_ORDER),
+    yearFrom: YEAR_MIN,
+    yearTo: YEAR_MAX
+  };
+
+  // ---------- static header stats (full dataset) ----------
+  (function renderKpis(){
+    var venues = new Set(MATCHES.map(function(r){ return r[7]+"|"+r[8]; }));
+    var wcCount = MATCHES.filter(function(r){ return r[11]===1; }).length;
+    var kpis = [
+      [MATCHES.length.toLocaleString(), "Tests recorded"],
+      [YEAR_MIN + "-" + YEAR_MAX, "Seasons spanned"],
+      [TEAM_ORDER.length, "Tier-one nations"],
+      [wcCount, "World Cup tests"],
+      [venues.size, "Grounds used"]
+    ];
+    document.getElementById("kpiRow").innerHTML = kpis.map(function(k){
+      return '<div class="kpi"><div class="kpi-value tabular">'+k[0]+'</div><div class="kpi-label">'+k[1]+'</div></div>';
+    }).join("");
+    document.getElementById("footerCount").textContent = MATCHES.length.toLocaleString();
+  })();
+
+  // ---------- filter bar ----------
+  var fromSel = document.getElementById("yearFrom");
+  var toSel = document.getElementById("yearTo");
+  for (var y = YEAR_MIN; y <= YEAR_MAX; y++) {
+    fromSel.appendChild(new Option(y, y));
+    toSel.appendChild(new Option(y, y));
+  }
+  fromSel.value = state.yearFrom;
+  toSel.value = state.yearTo;
+  fromSel.addEventListener("change", function(){
+    state.yearFrom = Math.min(+fromSel.value, state.yearTo);
+    fromSel.value = state.yearFrom;
+    render();
+  });
+  toSel.addEventListener("change", function(){
+    state.yearTo = Math.max(+toSel.value, state.yearFrom);
+    toSel.value = state.yearTo;
+    render();
+  });
+
+  var teamChipsEl = document.getElementById("teamChips");
+  TEAM_ORDER.forEach(function(team){
+    var chip = document.createElement("button");
+    chip.className = "chip";
+    chip.type = "button";
+    chip.textContent = team;
+    chip.setAttribute("aria-pressed", "true");
+    chip.addEventListener("click", function(){
+      if (state.teams.has(team)) {
+        if (state.teams.size <= 2) return;
+        state.teams.delete(team);
+        chip.setAttribute("aria-pressed", "false");
+      } else {
+        state.teams.add(team);
+        chip.setAttribute("aria-pressed", "true");
+      }
+      render();
+    });
+    teamChipsEl.appendChild(chip);
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    state.teams = new Set(TEAM_ORDER);
+    state.yearFrom = YEAR_MIN; state.yearTo = YEAR_MAX;
+    fromSel.value = YEAR_MIN; toSel.value = YEAR_MAX;
+    Array.prototype.forEach.call(teamChipsEl.children, function(c){ c.setAttribute("aria-pressed","true"); });
+    render();
+  });
+
+  var standingsShowTable = false;
+  document.getElementById("standingsToggle").addEventListener("click", function(){
+    standingsShowTable = !standingsShowTable;
+    this.textContent = standingsShowTable ? "View as chart" : "View as table";
+    document.getElementById("standingsWrap").style.display = standingsShowTable ? "none" : "";
+    document.getElementById("standingsTableWrap").style.display = standingsShowTable ? "" : "none";
+  });
+
+  // ---------- tooltip ----------
+  var tip = document.getElementById("tooltip");
+  function showTip(html, x, y){
+    tip.innerHTML = html;
+    tip.classList.add("show");
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var px = Math.min(x + 14, window.innerWidth - w - 10);
+    var py = Math.max(y - h - 14, 8);
+    tip.style.left = px + "px";
+    tip.style.top = py + "px";
+  }
+  function hideTip(){ tip.classList.remove("show"); }
+  function wireTips(container){
+    container.querySelectorAll("[data-tip]").forEach(function(el){
+      el.addEventListener("mousemove", function(e){ showTip(el.getAttribute("data-tip"), e.clientX, e.clientY); });
+      el.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+  function svgNS(tag, attrs){
+    var parts = ["<"+tag];
+    for (var k in attrs) parts.push(' '+k+'="'+attrs[k]+'"');
+    parts.push("/>");
+    return parts.join("");
+  }
+
+  function outcome(row, team){
+    var isHome = row[1] === team;
+    var us = isHome ? row[3] : row[4];
+    var them = isHome ? row[4] : row[3];
+    if (us > them) return "W";
+    if (us < them) return "L";
+    return "D";
+  }
+
+  // ================= RENDER =================
+  function render(){
+    var rows = MATCHES.filter(function(r){
+      var year = +r[0].slice(0,4);
+      return year >= state.yearFrom && year <= state.yearTo &&
+        state.teams.has(r[1]) && state.teams.has(r[2]);
+    });
+
+    document.getElementById("teamCountLabel").textContent =
+      "(" + state.teams.size + " of " + TEAM_ORDER.length + " selected)";
+
+    renderTrend(rows);
+    renderStandings(rows);
+    renderHeatmap(rows);
+    renderCompetitionMix(rows);
+    renderVenues(rows);
+    renderRecords(rows);
+  }
+
+  // ---------- trend: stacked area ----------
+  function renderTrend(rows){
+    var legend = document.getElementById("trendLegend");
+    legend.innerHTML = CATEGORIES.map(function(c,i){
+      return '<div class="legend-item"><span class="swatch" style="background:'+CAT_COLORS[i]+'"></span>'+esc(c)+'</div>';
+    }).join("");
+
+    var wrap = document.getElementById("trendWrap");
+    var span = state.yearTo - state.yearFrom;
+    if (span < 1 || rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No tests in this selection.</div>';
+      return;
+    }
+
+    var W = 960, H = 320, M = {top: 12, right: 16, bottom: 26, left: 34};
+    var plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
+    var nYears = span + 1;
+    var byYearCat = {};
+    for (var yy = state.yearFrom; yy <= state.yearTo; yy++) byYearCat[yy] = [0,0,0,0,0,0];
+    rows.forEach(function(r){
+      var yr = +r[0].slice(0,4);
+      byYearCat[yr][r[5]]++;
+    });
+    var years = [];
+    for (var yy2 = state.yearFrom; yy2 <= state.yearTo; yy2++) years.push(yy2);
+
+    var maxTotal = 0;
+    years.forEach(function(yr){
+      var t = byYearCat[yr].reduce(function(a,b){return a+b;}, 0);
+      if (t > maxTotal) maxTotal = t;
+    });
+    maxTotal = Math.max(maxTotal, 4);
+    var niceMax = Math.ceil(maxTotal / 4) * 4;
+
+    function xAt(i){ return M.left + (i/(nYears-1 || 1)) * plotW; }
+    function yAt(v){ return M.top + plotH - (v/niceMax) * plotH; }
+
+    var cum = years.map(function(){ return 0; });
+    var areas = [];
+    for (var c = 0; c < 6; c++) {
+      var top = [], bottom = [];
+      years.forEach(function(yr, i){
+        bottom.push([xAt(i), yAt(cum[i])]);
+        cum[i] += byYearCat[yr][c];
+        top.push([xAt(i), yAt(cum[i])]);
+      });
+      var d = "M" + top.map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}).join("L");
+      d += "L" + bottom.slice().reverse().map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}).join("L") + "Z";
+      areas.push('<path d="'+d+'" fill="'+CAT_COLORS[c]+'" opacity="0.92"></path>');
+    }
+
+    var gridLines = "";
+    var ticks = 4;
+    for (var t=0; t<=ticks; t++){
+      var v = (niceMax/ticks)*t;
+      var yy3 = yAt(v);
+      gridLines += svgNS("line", {x1:M.left, x2:W-M.right, y1:yy3.toFixed(1), y2:yy3.toFixed(1), class:"grid-line"});
+      gridLines += '<text class="axis-label" x="'+(M.left-8)+'" y="'+(yy3+3.5).toFixed(1)+'" text-anchor="end">'+Math.round(v)+'</text>';
+    }
+    var xLabels = "";
+    var step = Math.max(1, Math.round(nYears/8));
+    years.forEach(function(yr, i){
+      if (i % step === 0 || i === years.length-1) {
+        xLabels += '<text class="axis-label" x="'+xAt(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+yr+'</text>';
+      }
+    });
+
+    var svg = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Tests per year">' +
+      gridLines +
+      svgNS("line", {x1:M.left, x2:M.left, y1:M.top, y2:M.top+plotH, class:"baseline"}) +
+      areas.join("") +
+      xLabels +
+      '<rect id="trendOverlay" x="'+M.left+'" y="'+M.top+'" width="'+plotW+'" height="'+plotH+'" fill="transparent"></rect>' +
+      '<line id="trendCrosshair" x1="0" x2="0" y1="'+M.top+'" y2="'+(M.top+plotH)+'" stroke="var(--ink-muted)" stroke-width="1" stroke-dasharray="3,3" style="display:none"></line>' +
+      '</svg>';
+    wrap.innerHTML = svg;
+
+    var overlay = wrap.querySelector("#trendOverlay");
+    var crosshair = wrap.querySelector("#trendCrosshair");
+    var svgEl = wrap.querySelector("svg");
+    overlay.addEventListener("mousemove", function(e){
+      var pt = svgEl.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      var loc = pt.matrixTransform(svgEl.getScreenCTM().inverse());
+      var i = Math.round(((loc.x - M.left) / plotW) * (nYears-1));
+      i = Math.max(0, Math.min(nYears-1, i));
+      var yr = years[i];
+      crosshair.style.display = "";
+      crosshair.setAttribute("x1", xAt(i).toFixed(1));
+      crosshair.setAttribute("x2", xAt(i).toFixed(1));
+      var breakdown = byYearCat[yr].map(function(v,ci){
+        return v ? '<div>'+esc(CATEGORIES[ci])+': <b>'+v+'</b></div>' : '';
+      }).join("");
+      var total = byYearCat[yr].reduce(function(a,b){return a+b;},0);
+      showTip('<div><b>'+yr+'</b> - '+total+' test'+(total===1?"":"s")+'</div>'+breakdown, e.clientX, e.clientY);
+    });
+    overlay.addEventListener("mouseleave", function(){ crosshair.style.display = "none"; hideTip(); });
+  }
+
+  // ---------- standings ----------
+  function renderStandings(rows){
+    var legendHtml = ['Won','Drawn','Lost'].map(function(l,i){
+      var col = i===0?"var(--good)":(i===1?"var(--draw)":"var(--critical)");
+      return '<div class="legend-item"><span class="swatch" style="background:'+col+'"></span>'+l+'</div>';
+    }).join("");
+    document.getElementById("standingsLegend").innerHTML = legendHtml;
+
+    var teams = Array.from(state.teams);
+    var stats = teams.map(function(team){
+      var w=0,d=0,l=0;
+      rows.forEach(function(r){
+        if (r[1] !== team && r[2] !== team) return;
+        var o = outcome(r, team);
+        if (o==="W") w++; else if (o==="D") d++; else l++;
+      });
+      var played = w+d+l;
+      return { team:team, w:w, d:d, l:l, played:played, pct: played? w/played : 0 };
+    }).filter(function(s){ return s.played > 0; })
+      .sort(function(a,b){ return b.pct - a.pct || b.played - a.played; });
+
+    var wrap = document.getElementById("standingsWrap");
+    if (stats.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No tests in this selection.</div>';
+    } else {
+      var W = 640, rowH = 34, top = 6;
+      var H = top*2 + rowH*stats.length;
+      var labelW = 92, pctW = 44, barLeft = labelW, barRight = W - pctW;
+      var barMaxW = barRight - barLeft;
+
+      var bars = stats.map(function(s, i){
+        var y = top + i*rowH;
+        var barH = 18;
+        var by = y + (rowH-barH)/2;
+        var wW = barMaxW * (s.w/s.played);
+        var dW = barMaxW * (s.d/s.played);
+        var lW = barMaxW * (s.l/s.played);
+        var x = barLeft;
+        var segs = "";
+        if (s.w>0) { segs += svgNS("rect",{x:x.toFixed(1), y:by, width:Math.max(wW,0).toFixed(1), height:barH, rx:3, fill:"var(--good)"}); x += wW; }
+        if (s.d>0) { if (s.w>0) x += 1; segs += svgNS("rect",{x:x.toFixed(1), y:by, width:Math.max(dW,0).toFixed(1), height:barH, rx: s.w>0?0:3, fill:"var(--draw)"}); x += dW; }
+        if (s.l>0) { if (s.w>0||s.d>0) x += 1; segs += svgNS("rect",{x:x.toFixed(1), y:by, width:Math.max(lW,0).toFixed(1), height:barH, rx:3, fill:"var(--critical)"}); }
+        var tip = "<b>"+esc(s.team)+"</b><br>Played "+s.played+" - Won "+s.w+" - Drawn "+s.d+" - Lost "+s.l;
+        return '<g data-tip="'+esc(tip)+'">' +
+          '<rect x="0" y="'+y+'" width="'+W+'" height="'+rowH+'" fill="transparent"></rect>' +
+          '<text class="cat-label" x="0" y="'+(y+rowH/2+4)+'">'+esc(s.team)+'</text>' +
+          segs +
+          '<text class="bar-label" x="'+(barRight+8)+'" y="'+(y+rowH/2+4)+'" text-anchor="start">'+Math.round(s.pct*100)+'%</text>' +
+          '</g>';
+      }).join("");
+
+      wrap.innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Nation standings">'+bars+'</svg>';
+      wireTips(wrap);
+    }
+
+    var tblWrap = document.getElementById("standingsTableWrap");
+    if (stats.length === 0) {
+      tblWrap.innerHTML = "";
+    } else {
+      var head = "<tr><th>Nation</th><th class='num'>P</th><th class='num'>W</th><th class='num'>D</th><th class='num'>L</th><th class='num'>Win %</th></tr>";
+      var body = stats.map(function(s){
+        return "<tr><td>"+esc(s.team)+"</td><td class='num'>"+s.played+"</td><td class='num'>"+s.w+"</td><td class='num'>"+s.d+"</td><td class='num'>"+s.l+"</td><td class='num'>"+Math.round(s.pct*100)+"%</td></tr>";
+      }).join("");
+      tblWrap.innerHTML = "<table class='data-table'><thead>"+head+"</thead><tbody>"+body+"</tbody></table>";
+    }
+  }
+
+  // ---------- head-to-head heatmap ----------
+  function renderHeatmap(rows){
+    var teams = Array.from(state.teams).sort();
+    var wrap = document.getElementById("heatmapWrap");
+    if (teams.length < 2 || rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Select at least two nations.</div>';
+      return;
+    }
+    var n = teams.length;
+    var idx = {}; teams.forEach(function(t,i){ idx[t]=i; });
+    var counts = teams.map(function(){ return teams.map(function(){ return {total:0,w:{}}; }); });
+    rows.forEach(function(r){
+      var i = idx[r[1]], j = idx[r[2]];
+      if (i===undefined || j===undefined) return;
+      counts[i][j].total++; counts[j][i].total++;
+      var o = outcome(r, r[1]);
+      counts[i][j].w[r[1]] = (counts[i][j].w[r[1]]||0) + (o==="W"?1:0);
+      counts[j][i].w[r[1]] = counts[i][j].w[r[1]];
+    });
+    var maxCount = 0;
+    counts.forEach(function(row,i){ row.forEach(function(c,j){ if (i!==j && c.total>maxCount) maxCount = c.total; }); });
+    maxCount = Math.max(maxCount, 1);
+
+    var M = {left: 78, top: 8, right: 8, bottom: 30};
+    var cell = n <= 6 ? 52 : (n <= 8 ? 42 : 34);
+    var W = M.left + cell*n + M.right;
+    var H = M.top + cell*n + M.bottom;
+
+    function colorFor(v){
+      if (v===0) return "var(--grid)";
+      var t = v / maxCount;
+      if (t < 0.33) return "var(--seq-100)";
+      if (t < 0.66) return "var(--seq-300)";
+      if (t < 0.85) return "var(--seq-500)";
+      return "var(--seq-650)";
+    }
+    function textColorFor(v){
+      var t = v / maxCount;
+      return t >= 0.66 ? "#ffffff" : "var(--ink-primary)";
+    }
+
+    var cells = "";
+    teams.forEach(function(rt, i){
+      cells += '<text class="cat-label" x="'+(M.left-8)+'" y="'+(M.top+i*cell+cell/2+4)+'" text-anchor="end">'+esc(rt)+'</text>';
+      teams.forEach(function(ct, j){
+        var x = M.left + j*cell, y = M.top + i*cell;
+        if (i === j) {
+          cells += svgNS("rect",{x:x+1,y:y+1,width:cell-2,height:cell-2,rx:6,fill:"var(--chip-bg)"});
+        } else {
+          var c = counts[i][j];
+          var fill = colorFor(c.total);
+          var winsRow = c.w[rt] || 0;
+          var winsCol = c.total - winsRow - (function(){
+            var d=0; rows.forEach(function(r){
+              if (((r[1]===rt&&r[2]===ct)||(r[1]===ct&&r[2]===rt)) && r[3]===r[4]) d++;
+            }); return d;
+          })();
+          var draws = 0;
+          rows.forEach(function(r){ if(((r[1]===rt&&r[2]===ct)||(r[1]===ct&&r[2]===rt)) && r[3]===r[4]) draws++; });
+          var tip = "<b>"+esc(rt)+" vs "+esc(ct)+"</b><br>"+c.total+" meeting"+(c.total===1?"":"s")+" - "+esc(rt)+" won "+winsRow+", "+esc(ct)+" won "+winsCol+(draws?", "+draws+" drawn":"");
+          cells += '<g data-tip="'+esc(tip).replace(/"/g,"&quot;")+'">' +
+            svgNS("rect",{x:x+1,y:y+1,width:cell-2,height:cell-2,rx:6,fill:fill}) +
+            '<text x="'+(x+cell/2)+'" y="'+(y+cell/2+4)+'" text-anchor="middle" style="fill:'+textColorFor(c.total)+';font-size:12px;font-variant-numeric:tabular-nums">'+c.total+'</text>' +
+            '</g>';
+        }
+      });
+    });
+    teams.forEach(function(ct, j){
+      cells += '<text class="axis-label" x="'+(M.left+j*cell+cell/2)+'" y="'+(M.top+cell*n+16)+'" text-anchor="middle">'+esc(TEAM_CODE[ct]||ct)+'</text>';
+    });
+
+    var legendGrad = 'linear-gradient(90deg, var(--grid), var(--seq-100), var(--seq-300), var(--seq-500), var(--seq-650))';
+    wrap.innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Head to head matrix">'+cells+'</svg>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--ink-muted)">' +
+      '<span>Fewer</span><span style="flex:1;max-width:120px;height:8px;border-radius:4px;background:'+legendGrad+'"></span><span>More matches</span></div>';
+    wireTips(wrap);
+  }
+
+  // ---------- competition mix ----------
+  function renderCompetitionMix(rows){
+    var wrap = document.getElementById("compWrap");
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No tests in this selection.</div>';
+      return;
+    }
+    var counts = [0,0,0,0,0,0];
+    rows.forEach(function(r){ counts[r[5]]++; });
+    var items = CATEGORIES.map(function(name,i){ return {name:name, count:counts[i], color:CAT_COLORS[i]}; })
+      .filter(function(it){ return it.count>0; })
+      .sort(function(a,b){ return b.count-a.count; });
+    var max = items[0].count;
+
+    var W = 560, rowH = 32, top = 4;
+    var H = top*2 + rowH*items.length;
+    var labelW = 190, valW = 44;
+    var barLeft = labelW, barRight = W - valW, barMaxW = barRight-barLeft;
+
+    var bars = items.map(function(it, i){
+      var y = top + i*rowH;
+      var barH = 16, by = y+(rowH-barH)/2;
+      var w = Math.max(barMaxW * (it.count/max), 2);
+      return '<g data-tip="<b>'+esc(it.name)+'</b><br>'+it.count+' tests">' +
+        '<rect x="0" y="'+y+'" width="'+W+'" height="'+rowH+'" fill="transparent"></rect>' +
+        '<text class="cat-label" x="0" y="'+(y+rowH/2+4)+'">'+esc(it.name)+'</text>' +
+        svgNS("rect",{x:barLeft, y:by, width:w.toFixed(1), height:barH, rx:3, fill:it.color}) +
+        '<text class="bar-label" x="'+(barLeft+w+8)+'" y="'+(y+rowH/2+4)+'">'+it.count+'</text>' +
+        '</g>';
+    }).join("");
+    wrap.innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Competition mix">'+bars+'</svg>';
+    wireTips(wrap);
+  }
+
+  // ---------- venues ----------
+  function renderVenues(rows){
+    var wrap = document.getElementById("venueWrap");
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No tests in this selection.</div>';
+      return;
+    }
+    var counts = {};
+    rows.forEach(function(r){
+      var key = r[7] + "|" + r[9];
+      counts[key] = (counts[key]||0) + 1;
+    });
+    var items = Object.keys(counts).map(function(k){
+      var parts = k.split("|");
+      return { stadium: parts[0], country: parts[1], count: counts[k] };
+    }).sort(function(a,b){ return b.count-a.count; }).slice(0,8);
+    var max = items[0].count;
+
+    var W = 560, rowH = 32, top = 4;
+    var H = top*2 + rowH*items.length;
+    var labelW = 190, valW = 30;
+    var barLeft = labelW, barRight = W - valW, barMaxW = barRight-barLeft;
+
+    var bars = items.map(function(it, i){
+      var y = top + i*rowH;
+      var barH = 16, by = y+(rowH-barH)/2;
+      var w = Math.max(barMaxW * (it.count/max), 2);
+      var label = it.stadium.length > 22 ? it.stadium.slice(0,21)+"..." : it.stadium;
+      return '<g data-tip="<b>'+esc(it.stadium)+'</b><br>'+esc(it.country)+' - '+it.count+' tests hosted">' +
+        '<rect x="0" y="'+y+'" width="'+W+'" height="'+rowH+'" fill="transparent"></rect>' +
+        '<text class="cat-label" x="0" y="'+(y+rowH/2+4)+'">'+esc(label)+'</text>' +
+        svgNS("rect",{x:barLeft, y:by, width:w.toFixed(1), height:barH, rx:3, fill:"var(--s1)"}) +
+        '<text class="bar-label" x="'+(barLeft+w+8)+'" y="'+(y+rowH/2+4)+'">'+it.count+'</text>' +
+        '</g>';
+    }).join("");
+    wrap.innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Busiest grounds">'+bars+'</svg>';
+    wireTips(wrap);
+  }
+
+  // ---------- records ----------
+  function renderRecords(rows){
+    var grid = document.getElementById("recordsGrid");
+    if (rows.length === 0) {
+      grid.innerHTML = '<div class="empty-state">No tests in this selection.</div>';
+      return;
+    }
+    var biggest = rows.slice().sort(function(a,b){ return Math.abs(b[3]-b[4]) - Math.abs(a[3]-a[4]); })[0];
+    var highest = rows.slice().sort(function(a,b){ return (b[3]+b[4]) - (a[3]+a[4]); })[0];
+
+    var pairCounts = {};
+    rows.forEach(function(r){
+      var key = [r[1],r[2]].sort().join(" v ");
+      pairCounts[key] = (pairCounts[key]||0) + 1;
+    });
+    var topPairKey = Object.keys(pairCounts).sort(function(a,b){ return pairCounts[b]-pairCounts[a]; })[0];
+    var topPairTeams = topPairKey.split(" v ");
+    var wA=0, wB=0, dAB=0;
+    rows.forEach(function(r){
+      if (!((r[1]===topPairTeams[0]&&r[2]===topPairTeams[1])||(r[1]===topPairTeams[1]&&r[2]===topPairTeams[0]))) return;
+      if (r[3]===r[4]) { dAB++; return; }
+      var winner = r[3]>r[4] ? r[1] : r[2];
+      if (winner===topPairTeams[0]) wA++; else wB++;
+    });
+
+    var homeW=0, homeTotal=0, awayW=0, neutralW=0, neutralTotal=0;
+    rows.forEach(function(r){
+      if (r[3]===r[4]) { if(r[10]===1){neutralTotal++;} return; }
+      var homeWin = r[3] > r[4];
+      if (r[10]===1) { neutralTotal++; if (homeWin) neutralW++; }
+      else { homeTotal++; if (homeWin) homeW++; }
+    });
+    var homePct = homeTotal ? Math.round(100*homeW/homeTotal) : 0;
+
+    var winnerBig = biggest[3]>biggest[4] ? biggest[1] : biggest[2];
+    var loserBig = biggest[3]>biggest[4] ? biggest[2] : biggest[1];
+    var scoreBig = biggest[3]>biggest[4] ? biggest[3]+"-"+biggest[4] : biggest[4]+"-"+biggest[3];
+    var marginBig = Math.abs(biggest[3]-biggest[4]);
+
+    var tiles = [
+      {
+        tag: "Biggest margin",
+        headline: winnerBig + " " + marginBig + "-point win",
+        detail: winnerBig+" "+scoreBig+" "+loserBig+" - "+biggest[0].slice(0,4)
+      },
+      {
+        tag: "Highest-scoring test",
+        headline: (highest[3]+highest[4]) + " points, one match",
+        detail: highest[1]+" "+highest[3]+"-"+highest[4]+" "+highest[2]+" - "+highest[0].slice(0,4)
+      },
+      {
+        tag: "Most-played fixture",
+        headline: topPairTeams[0] + " v " + topPairTeams[1],
+        detail: pairCounts[topPairKey]+" meetings - "+topPairTeams[0]+" "+wA+"-"+wB+" "+topPairTeams[1]+(dAB?", "+dAB+" drawn":"")
+      },
+      {
+        tag: "Home advantage",
+        headline: homePct + "% home win rate",
+        detail: homeTotal+" decisive home tests in range (neutral-venue tests excluded)"
+      }
+    ];
+    grid.innerHTML = tiles.map(function(t){
+      return '<div class="record-tile"><div class="tag">'+esc(t.tag)+'</div><div class="headline">'+esc(t.headline)+'</div><div class="detail">'+esc(t.detail)+'</div></div>';
+    }).join("");
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
