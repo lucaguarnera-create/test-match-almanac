@@ -133,6 +133,18 @@
   /* ---------- page body ---------- */
   .page{ max-width: 1180px; margin: 0 auto; padding: 24px 28px 60px; display: flex; flex-direction: column; gap: 20px; }
 
+  @media (max-width: 640px){
+    .masthead{ padding: 32px 16px 22px; }
+    .page{ padding: 18px 16px 44px; }
+    .kpi-row{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .kpi:last-child{ grid-column: 1 / -1; }
+    .kpi-value{ font-size: 24px; }
+    .kpi{ padding: 12px 14px; }
+    .card{ padding: 16px 16px 14px; }
+    .card h2{ font-size: 19px; }
+    .filter-bar{ padding: 14px; gap: 14px; }
+  }
+
   .filter-bar{
     background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px;
     padding: 16px 18px; box-shadow: var(--shadow);
@@ -186,7 +198,7 @@
   .legend-item{ display:flex; align-items:center; gap: 6px; }
   .swatch{ width: 10px; height: 10px; border-radius: 3px; flex: none; }
 
-  .chart-wrap{ position: relative; }
+  .chart-wrap{ position: relative; max-width: 100%; overflow-x: auto; }
   svg{ display:block; width: 100%; height: auto; overflow: visible; }
   .axis-label{ fill: var(--ink-muted); font-size: 10.5px; font-family: "Inter", sans-serif; }
   .grid-line{ stroke: var(--grid); stroke-width: 1; }
@@ -439,6 +451,11 @@
     });
   }
 
+  function containerWidth(el, fallback){
+    var w = el.clientWidth;
+    return w > 0 ? w : fallback;
+  }
+
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
   function svgNS(tag, attrs){
     var parts = ["<"+tag];
@@ -489,7 +506,7 @@
       return;
     }
 
-    var W = 960, H = 320, M = {top: 12, right: 16, bottom: 26, left: 34};
+    var W = Math.max(280, containerWidth(wrap, 960)), H = 320, M = {top: 12, right: 16, bottom: 26, left: 34};
     var plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
     var nYears = span + 1;
     var byYearCat = {};
@@ -535,7 +552,8 @@
       gridLines += '<text class="axis-label" x="'+(M.left-8)+'" y="'+(yy3+3.5).toFixed(1)+'" text-anchor="end">'+Math.round(v)+'</text>';
     }
     var xLabels = "";
-    var step = Math.max(1, Math.round(nYears/8));
+    var maxLabels = Math.max(3, Math.floor(plotW / 60));
+    var step = Math.max(1, Math.round(nYears/maxLabels));
     years.forEach(function(yr, i){
       if (i % step === 0 || i === years.length-1) {
         xLabels += '<text class="axis-label" x="'+xAt(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+yr+'</text>';
@@ -599,7 +617,7 @@
     if (stats.length === 0) {
       wrap.innerHTML = '<div class="empty-state">No tests in this selection.</div>';
     } else {
-      var W = 640, rowH = 34, top = 6;
+      var W = Math.max(260, containerWidth(wrap, 640)), rowH = 34, top = 6;
       var H = top*2 + rowH*stats.length;
       var labelW = 92, pctW = 44, barLeft = labelW, barRight = W - pctW;
       var barMaxW = barRight - barLeft;
@@ -664,10 +682,14 @@
     counts.forEach(function(row,i){ row.forEach(function(c,j){ if (i!==j && c.total>maxCount) maxCount = c.total; }); });
     maxCount = Math.max(maxCount, 1);
 
-    var M = {left: 78, top: 8, right: 8, bottom: 30};
-    var cell = n <= 6 ? 52 : (n <= 8 ? 42 : 34);
+    var M = {left: 94, top: 8, right: 8, bottom: 30};
+    var containerW = containerWidth(wrap, 640);
+    var idealCell = n <= 6 ? 52 : (n <= 8 ? 42 : 34);
+    var fitCell = Math.floor((containerW - M.left - M.right) / n);
+    var cell = Math.max(30, Math.min(idealCell, fitCell));
     var W = M.left + cell*n + M.right;
     var H = M.top + cell*n + M.bottom;
+    var needsScroll = W > containerW;
 
     function colorFor(v){
       if (v===0) return "var(--grid)";
@@ -713,7 +735,12 @@
     });
 
     var legendGrad = 'linear-gradient(90deg, var(--grid), var(--seq-100), var(--seq-300), var(--seq-500), var(--seq-650))';
-    wrap.innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Head to head matrix">'+cells+'</svg>' +
+    var svgStyle = needsScroll ? 'width:'+W+'px;max-width:none;flex:none' : 'width:100%';
+    wrap.innerHTML =
+      '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">' +
+      '<svg viewBox="0 0 '+W+' '+H+'" style="'+svgStyle+'" role="img" aria-label="Head to head matrix">'+cells+'</svg>' +
+      '</div>' +
+      (needsScroll ? '<div style="font-size:11px;color:var(--ink-muted);margin-top:4px">Scroll to see all nations &rarr;</div>' : '') +
       '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--ink-muted)">' +
       '<span>Fewer</span><span style="flex:1;max-width:120px;height:8px;border-radius:4px;background:'+legendGrad+'"></span><span>More matches</span></div>';
     wireTips(wrap);
@@ -733,9 +760,10 @@
       .sort(function(a,b){ return b.count-a.count; });
     var max = items[0].count;
 
-    var W = 560, rowH = 32, top = 4;
+    var W = Math.max(260, containerWidth(wrap, 560)), rowH = 32, top = 4;
     var H = top*2 + rowH*items.length;
-    var labelW = 190, valW = 44;
+    var longestName = items.reduce(function(m,it){ return Math.max(m, it.name.length); }, 0);
+    var labelW = Math.min(Math.round(longestName*6.4)+8, Math.max(90, Math.round(W*0.55))), valW = 36;
     var barLeft = labelW, barRight = W - valW, barMaxW = barRight-barLeft;
 
     var bars = items.map(function(it, i){
@@ -771,16 +799,17 @@
     }).sort(function(a,b){ return b.count-a.count; }).slice(0,8);
     var max = items[0].count;
 
-    var W = 560, rowH = 32, top = 4;
+    var W = Math.max(260, containerWidth(wrap, 560)), rowH = 32, top = 4;
     var H = top*2 + rowH*items.length;
-    var labelW = 190, valW = 30;
+    var labelW = Math.max(90, Math.min(190, Math.round(W*0.4))), valW = 30;
     var barLeft = labelW, barRight = W - valW, barMaxW = barRight-barLeft;
+    var maxChars = Math.max(8, Math.floor(labelW / 6.4));
 
     var bars = items.map(function(it, i){
       var y = top + i*rowH;
       var barH = 16, by = y+(rowH-barH)/2;
       var w = Math.max(barMaxW * (it.count/max), 2);
-      var label = it.stadium.length > 22 ? it.stadium.slice(0,21)+"..." : it.stadium;
+      var label = it.stadium.length > maxChars ? it.stadium.slice(0,maxChars-1)+"..." : it.stadium;
       return '<g data-tip="<b>'+esc(it.stadium)+'</b><br>'+esc(it.country)+' - '+it.count+' tests hosted">' +
         '<rect x="0" y="'+y+'" width="'+W+'" height="'+rowH+'" fill="transparent"></rect>' +
         '<text class="cat-label" x="0" y="'+(y+rowH/2+4)+'">'+esc(label)+'</text>' +
@@ -859,6 +888,12 @@
   }
 
   render();
+
+  var resizeTimer;
+  window.addEventListener("resize", function(){
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
 })();
 </script>
 </body>
