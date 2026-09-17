@@ -2155,7 +2155,7 @@ const MATCHES = [
 ["2011-10-08","Wales","Ireland",22,10,2,"2011 Rugby World Cup","Regional Stadium","Wellington","New Zealand",1,1],
 ["2011-10-08","France","England",19,12,2,"2011 Rugby World Cup quarter-final","Eden Park","Auckland","New Zealand",1,1],
 ["2011-10-09","New Zealand","Argentina",33,10,2,"2011 Rugby World Cup Quarter-finals","Eden Park","Auckland","New Zealand",0,1],
-["2011-10-09","South Africa","Australia",9,11,2,"2011 Rugby World Cup Quarter-final","	Wellington Regional Stadium","Wellington","New Zealand",1,1],
+["2011-10-09","South Africa","Australia",9,11,2,"2011 Rugby World Cup Quarter-final","Wellington Regional Stadium","Wellington","New Zealand",1,1],
 ["2011-10-15","Wales","France",8,9,2,"2011 rugby World Cup Semi-finals","Eden Park","Auckland","New Zealand",1,1],
 ["2011-10-16","New Zealand","Australia",20,6,2,"2011 Rugby World Cup Semi-final","Eden Park","Auckland","New Zealand",0,1],
 ["2011-10-21","Australia","Wales",21,18,2,"2011 Rugby World Cup bronze final","Eden Park","Auckland","New Zealand",1,1],

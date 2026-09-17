@@ -272,6 +272,62 @@
 
   footer{ max-width: 1180px; margin: 0 auto; padding: 0 28px 40px; color: var(--ink-muted); font-size: 12px; }
   footer a{ color: inherit; }
+
+  /* ---------- chat widget ---------- */
+  .chat-fab{
+    position: fixed; right: 20px; bottom: 20px; z-index: 60;
+    width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
+    background: var(--pitch); color: var(--pitch-ink); box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+    transition: transform .15s ease;
+  }
+  .chat-fab:hover{ transform: scale(1.06); }
+  .chat-fab[data-open="true"] .fab-icon-chat{ display:none; }
+  .chat-fab:not([data-open="true"]) .fab-icon-close{ display:none; }
+
+  .chat-panel{
+    position: fixed; right: 20px; bottom: 88px; z-index: 60;
+    width: 380px; max-width: calc(100vw - 40px); height: min(560px, calc(100vh - 130px));
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: 0 20px 50px -12px rgba(0,0,0,0.35);
+    display: flex; flex-direction: column; overflow: hidden;
+    opacity: 0; transform: translateY(12px) scale(.98); pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .chat-panel[data-open="true"]{ opacity: 1; transform: none; pointer-events: auto; }
+
+  .chat-head{
+    background: linear-gradient(180deg, var(--pitch), color-mix(in srgb, var(--pitch) 82%, black));
+    color: var(--pitch-ink); padding: 14px 16px; flex: none;
+  }
+  .chat-head .ch-title{ font-family:"Barlow Condensed",sans-serif; font-size: 18px; font-weight: 700; }
+  .chat-head .ch-sub{ font-size: 11px; opacity: .8; margin-top: 1px; }
+
+  .chat-body{ flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .chat-msg{ max-width: 86%; font-size: 13.5px; line-height: 1.45; padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; }
+  .chat-msg.user{ align-self: flex-end; background: var(--pitch); color: var(--pitch-ink); border-bottom-right-radius: 3px; }
+  .chat-msg.bot{ align-self: flex-start; background: var(--chip-bg); color: var(--ink-primary); border-bottom-left-radius: 3px; }
+  .chat-msg.err{ align-self: flex-start; background: color-mix(in srgb, var(--critical) 16%, transparent); color: var(--critical); }
+  .chat-msg.typing{ align-self: flex-start; background: var(--chip-bg); color: var(--ink-muted); font-style: italic; }
+
+  .chat-starters{ display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .chat-starter{
+    font: inherit; text-align: left; font-size: 12.5px; color: var(--ink-secondary);
+    background: var(--chip-bg); border: 1px solid var(--border); border-radius: 9px;
+    padding: 8px 10px; cursor: pointer;
+  }
+  .chat-starter:hover{ background: color-mix(in srgb, var(--pitch) 10%, var(--chip-bg)); }
+
+  .chat-input-row{ flex: none; display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+  .chat-input-row input{
+    flex: 1; font: inherit; font-size: 13.5px; padding: 9px 12px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--chip-bg); color: var(--ink-primary);
+  }
+  .chat-input-row button{
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; flex: none;
+    padding: 0 16px; border-radius: 20px; border: none; background: var(--pitch); color: var(--pitch-ink);
+  }
+  .chat-input-row button:disabled{ opacity: .5; cursor: default; }
 </style>
 </head>
 <body>
@@ -391,6 +447,22 @@
 </footer>
 
 <div class="tooltip" id="tooltip"></div>
+
+<button class="chat-fab" id="chatFab" aria-label="Ask the Almanac" data-open="false">
+  <span class="fab-icon-chat">&#128172;</span>
+  <span class="fab-icon-close">&times;</span>
+</button>
+<div class="chat-panel" id="chatPanel" data-open="false" role="dialog" aria-label="Ask the Almanac chat">
+  <div class="chat-head">
+    <div class="ch-title">Ask the Almanac</div>
+    <div class="ch-sub">Chat about the 2,783 tests in this dataset</div>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="e.g. England vs Wales head-to-head?" maxlength="500" autocomplete="off">
+    <button id="chatSend" type="button">Send</button>
+  </div>
+</div>
 
 <script src="data.js"></script>
 <script>
@@ -1094,6 +1166,103 @@
   window.addEventListener("resize", function(){
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(render, 150);
+  });
+})();
+</script>
+
+<script>
+(function(){
+  "use strict";
+  var fab = document.getElementById("chatFab");
+  var panel = document.getElementById("chatPanel");
+  var body = document.getElementById("chatBody");
+  var input = document.getElementById("chatInput");
+  var sendBtn = document.getElementById("chatSend");
+
+  var STARTERS = [
+    "England vs Wales - who leads the head-to-head?",
+    "What's New Zealand's win rate since 2000?",
+    "When's the next Six Nations?"
+  ];
+
+  var history = [];
+  var opened = false;
+  var busy = false;
+
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+  function scrollToBottom(){ body.scrollTop = body.scrollHeight; }
+
+  function renderStarters(){
+    var wrap = document.createElement("div");
+    wrap.className = "chat-msg bot";
+    wrap.innerHTML = "Ask me anything about these 2,783 rugby tests - head-to-heads, records, venues, or what's coming up next." +
+      '<div class="chat-starters">' + STARTERS.map(function(s){
+        return '<button type="button" class="chat-starter">'+esc(s)+'</button>';
+      }).join("") + '</div>';
+    body.appendChild(wrap);
+    wrap.querySelectorAll(".chat-starter").forEach(function(btn){
+      btn.addEventListener("click", function(){ sendMessage(btn.textContent); });
+    });
+  }
+
+  function addBubble(role, text){
+    var el = document.createElement("div");
+    el.className = "chat-msg " + role;
+    el.textContent = text;
+    body.appendChild(el);
+    scrollToBottom();
+    return el;
+  }
+
+  function openPanel(){
+    opened = true;
+    fab.setAttribute("data-open", "true");
+    panel.setAttribute("data-open", "true");
+    if (body.children.length === 0) renderStarters();
+    setTimeout(function(){ input.focus(); }, 150);
+  }
+  function closePanel(){
+    opened = false;
+    fab.setAttribute("data-open", "false");
+    panel.setAttribute("data-open", "false");
+  }
+  fab.addEventListener("click", function(){ opened ? closePanel() : openPanel(); });
+
+  function sendMessage(text){
+    text = (text || input.value).trim();
+    if (!text || busy) return;
+    input.value = "";
+    addBubble("user", text);
+    history.push({ role: "user", text: text });
+    if (history.length > 20) history = history.slice(-20);
+
+    busy = true;
+    sendBtn.disabled = true;
+    var typing = addBubble("typing", "Thinking...");
+
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, history: history.slice(0, -1) })
+    }).then(function(res){ return res.json(); }).then(function(data){
+      typing.remove();
+      var reply = (data && data.reply) || (data && data.error) || "Something went wrong - try again?";
+      addBubble(data && data.error ? "err" : "bot", reply);
+      if (!(data && data.error)) history.push({ role: "assistant", text: reply });
+    }).catch(function(){
+      typing.remove();
+      addBubble("err", "Couldn't reach the server. Check your connection and try again.");
+    }).finally(function(){
+      busy = false;
+      sendBtn.disabled = false;
+      scrollToBottom();
+    });
+  }
+
+  sendBtn.addEventListener("click", function(){ sendMessage(); });
+  input.addEventListener("keydown", function(e){
+    if (e.key === "Enter") { e.preventDefault(); sendMessage(); }
   });
 })();
 </script>
