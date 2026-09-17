@@ -194,6 +194,23 @@
   }
   .card .toolbtn:hover{ background: var(--chip-bg); }
 
+  .tournament-grid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+  @media (max-width: 780px){ .tournament-grid{ grid-template-columns: 1fr; } }
+  .tournament-card{
+    border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+    display: flex; flex-direction: column; gap: 8px; background: var(--chip-bg);
+  }
+  .tournament-card .tc-status{
+    align-self: flex-start; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px;
+  }
+  .tournament-card .tc-status.live{ background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+  .tournament-card .tc-status.upcoming{ background: color-mix(in srgb, var(--pitch) 14%, transparent); color: var(--pitch); }
+  .tournament-card .tc-name{ font-size: 19px; font-weight: 600; font-family: "Barlow Condensed", sans-serif; }
+  .tournament-card .tc-dates{ font-size: 12.5px; color: var(--ink-secondary); font-variant-numeric: tabular-nums; }
+  .tournament-card .tc-desc{ font-size: 12.5px; color: var(--ink-muted); }
+  .tournament-card .tc-note{ font-size: 12px; color: var(--ink-secondary); margin-top: auto; padding-top: 4px; border-top: 1px dashed var(--border); }
+
   .live-badge{
     font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--good);
     white-space: nowrap; flex: none;
@@ -284,6 +301,16 @@
       <div class="chip-row" id="teamChips"></div>
     </div>
     <button class="reset-btn" id="resetBtn">Reset filters</button>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Upcoming tournaments</h2>
+        <div class="subtitle">The confirmed international calendar from today</div>
+      </div>
+    </div>
+    <div class="tournament-grid" id="tournamentGrid"></div>
   </div>
 
   <div class="card">
@@ -419,6 +446,56 @@
     95:["Thunderstorm","⛈️"], 96:["Thunderstorm","⛈️"], 99:["Thunderstorm","⛈️"]
   };
   var weatherCache = {};
+
+  // Confirmed international windows, verified against World Rugby / Wikipedia (checked 2026-09-17).
+  // 2026 is the inaugural Nations Championship, which replaced that year's Rugby Championship
+  // and Autumn Internationals; Six Nations and the World Cup are unaffected.
+  var TOURNAMENTS = [
+    {
+      name: "Nations Championship",
+      start: "2026-07-04",
+      end: "2026-11-29",
+      desc: "Inaugural North vs South championship - England, France, Ireland, Scotland, Wales & Italy face New Zealand, South Africa, Australia, Argentina, Japan & Fiji. Finals Weekend at Twickenham.",
+      note: "Next round begins 1 November"
+    },
+    {
+      name: "Six Nations 2027",
+      start: "2027-02-05",
+      end: "2027-03-13",
+      desc: "England, France, Ireland, Scotland, Wales & Italy.",
+      note: ""
+    },
+    {
+      name: "Rugby World Cup 2027",
+      start: "2027-10-01",
+      end: "2027-11-13",
+      desc: "Hosted by Australia.",
+      note: ""
+    }
+  ];
+
+  function renderTournaments(){
+    var grid = document.getElementById("tournamentGrid");
+    var now = new Date();
+    var fmt = { month: "short", day: "numeric" };
+    var fmtY = { month: "short", day: "numeric", year: "numeric" };
+
+    grid.innerHTML = TOURNAMENTS.map(function(t){
+      var start = new Date(t.start+"T00:00:00");
+      var end = new Date(t.end+"T23:59:59");
+      var live = now >= start && now <= end;
+      var days = Math.ceil((start - now) / 86400000);
+      var status = live ? '<span class="tc-status live">Underway</span>' :
+        '<span class="tc-status upcoming">In '+days+' day'+(days===1?'':'s')+'</span>';
+      var dateStr = start.toLocaleDateString(undefined, fmt) + " - " + end.toLocaleDateString(undefined, fmtY);
+      return '<div class="tournament-card">' + status +
+        '<div class="tc-name">'+esc(t.name)+'</div>' +
+        '<div class="tc-dates">'+dateStr+'</div>' +
+        '<div class="tc-desc">'+esc(t.desc)+'</div>' +
+        (t.note ? '<div class="tc-note">'+esc(t.note)+'</div>' : '') +
+        '</div>';
+    }).join("");
+  }
   var CAT_COLORS = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)"];
 
   var YEARS = MATCHES.map(function(r){ return +r[0].slice(0,4); });
@@ -1010,6 +1087,7 @@
     }).join("");
   }
 
+  renderTournaments();
   render();
 
   var resizeTimer;
